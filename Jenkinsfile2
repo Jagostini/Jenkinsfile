@@ -24,13 +24,13 @@ node {
         git url: 'https://github.com/joanEPSI/IContinue.git/'
     }
     
-    stage('SonarQube analysis') { 
-        scannerHome = tool 'SonarQube Scanner 2.8'
-		withSonarQubeEnv('TPORM') {
-		    mvnCMD = "${mvnHome}\\bin\\mvn"
-		    bat (/"${mvnCMD}" sonar:sonar/)
-		}
-    }
+//    stage('SonarQube analysis') { 
+//        scannerHome = tool 'SonarQube Scanner 2.8'
+//		withSonarQubeEnv('TPORM') {
+//		    mvnCMD = "${mvnHome}\\bin\\mvn"
+//		    bat (/"${mvnCMD}" sonar:sonar/)
+//		}
+//    }
     
 	stage('Build') {
 		// Run the maven build
