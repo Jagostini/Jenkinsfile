@@ -21,7 +21,7 @@ node {
     
     stage('SCM Checkout') {
         echo 'Pulling changes'
-        git url: 'https://github.com/Jagostini/simple-maven-project-with-tests.git/'
+        git url: 'https://github.com/joanEPSI/IContinue.git/'
     }
     
     stage('SonarQube analysis') { 
