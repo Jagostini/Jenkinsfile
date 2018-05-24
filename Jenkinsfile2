@@ -1,4 +1,5 @@
 node {
+    try {
     def mvnHome = tool name: 'M3', type: 'maven'
     def mvnCMD
     //def javaHome = env.JAVA_HOME="${tool 'Jdk'}"
@@ -6,6 +7,7 @@ node {
     def scannerHome
     
     stage('Preparation') {
+        slackSend color: '#01B0F0', message: " ${env.STAGE_NAME} ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
         if (isUnix()) {
             mvnCMD = "${mvnHome}/bin/mvn"
             sh "${mvnCMD} --version"
@@ -14,25 +16,23 @@ node {
 	   	    bat (/"${mvnCMD}" --version/)
 	    }
     }
-	
-    stage('Slack Notification'){
-        slackSend "Build Started - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
-    }
     
     stage('SCM Checkout') {
-        echo 'Pulling changes'
-        git url: 'https://github.com/joanEPSI/IContinue.git/'
+        slackSend color: '#01B0F0', message: " ${env.STAGE_NAME} ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
+        git url: 'https://github.com/Jagostini/simple-maven-project-with-tests'
     }
     
-//    stage('SonarQube analysis') { 
-//        scannerHome = tool 'SonarQube Scanner 2.8'
-//		withSonarQubeEnv('TPORM') {
-//		    mvnCMD = "${mvnHome}\\bin\\mvn"
-//		    bat (/"${mvnCMD}" sonar:sonar/)
-//		}
-//    }
+    stage('SonarQube analysis') { 
+        slackSend color: '#01B0F0', message: " ${env.STAGE_NAME} ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
+        scannerHome = tool 'SonarQube Scanner 2.8'
+		withSonarQubeEnv('TPORM') {
+		    mvnCMD = "${mvnHome}\\bin\\mvn"
+		    bat (/"${mvnCMD}" sonar:sonar/)
+		}
+    }
     
 	stage('Build') {
+	    slackSend color: '#01B0F0', message: " ${env.STAGE_NAME} ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
 		// Run the maven build
 		env.JAVA_HOME="${tool 'Jdk'}"
 		mvnCMD = "${mvnHome}\\bin\\mvn"
@@ -40,26 +40,40 @@ node {
 	}
     
 	stage('Results') {
+	    slackSend color: '#01B0F0', message: " ${env.STAGE_NAME} ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
 		junit '**/target/surefire-reports/TEST-*.xml'
 		archive 'target/*.jar'
 	}
 		
 	stage ('Distribute binaries to Artifactory') { 
+	    slackSend color: '#01B0F0', message: " ${env.STAGE_NAME} ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
 		def SERVER_ID = 'art-1' 
 		def server = Artifactory.server SERVER_ID
+		def rtMaven = Artifactory.newMavenBuild()
+		rtMaven.tool = "${mvnCMD}"
 		def uploadSpec = 
 		"""
 		{
 			"files": [
 			{
-				"pattern": "all/target/all-(*).war",
-				"target": "libs-snapshots-local/com/huettermann/web/{1}/"
+				"pattern": "target/(*).jar",
+				"target": "generic-local/BobyetBoby/"
 			}]
 		}
 		"""
 		def buildInfo = Artifactory.newBuildInfo() 
 		buildInfo.env.capture = true 
+		buildInfo.env.collect()
+		rtMaven.resolver server: server, releaseRepo: 'libs-release', snapshotRepo: 'libs-snapshot'
+		rtMaven.deployer server: server, releaseRepo: 'libs-release-local', snapshotRepo: 'libs-snapshot-local'
 		buildInfo=server.upload(uploadSpec) 
-		server.publishBuildInfo(buildInfo) 
+		server.publishBuildInfo(buildInfo)
 	}
+	
+	slackSend color: 'good', message: "Pipeline success - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
+    } catch (err) {
+        //echo "Caught: ${err}"
+        currentBuild.result = 'FAILURE'
+        slackSend color: 'warning', message: "${err} - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
+    }
 }
