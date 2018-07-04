@@ -1,0 +1,21 @@
+node {
+    try {
+ 
+    stage('Preparation') {
+        slackSend color: '#01B0F0', message: " ${env.STAGE_NAME} ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
+
+    }
+    
+    stage('SCM Checkout') {
+        slackSend color: '#01B0F0', message: " ${env.STAGE_NAME} ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
+        git url: ''
+    }
+    
+    
+	slackSend color: 'good', message: "Pipeline success - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
+    } catch (err) {
+        //echo "Caught: ${err}"
+        currentBuild.result = 'FAILURE'
+        slackSend color: 'warning', message: "${err} - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)" 
+    }
+}
